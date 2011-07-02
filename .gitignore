@@ -1,1 +1,9 @@
 *.o
+*.swp
+CMakeFiles
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+install_manifest.txt
+src/config.h
+glyrosplugin.so
