@@ -1,6 +1,7 @@
 /* gmpc-glyros (GMPC plugin)
- * Copyright (C) 2011 
- * Project homepage: 
+ * Copyright (C) 2011 serztle <serztle@googlemail.com>
+ *                    sahib <sahib@online.de>
+ * Project homepage: https://github.com/sahib/gmpc-glyros
 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,26 +51,30 @@ static void glyros_init(void)
 	Gly_init();
 	atexit(Gly_cleanup);
 }
+
 static struct glyros_fetch_thread_data
 {
 	mpd_Song *song;
 	MetaDataType type;
 	void (*callback)(GList *list, gpointer data);
 	gpointer user_data;
-} glyros_fetch_thread_data;
+} glyros_fetch_thread_data; /* do not use it !!! just fix a warning */
 
 static int glyros_fetch_cover_priority(void)
 {
 	return cfg_get_single_value_as_int_with_default(config, LOG_SUBCLASS, "priority", 20);
 }
+
 static void glyros_fetch_cover_priority_set(int priority)
 {
 	cfg_set_single_value_as_int(config, LOG_SUBCLASS, "priority", priority);
 }
+
 static int glyros_get_enabled(void)
 {
 	return cfg_get_single_value_as_int_with_default(config, LOG_SUBCLASS, "enable", TRUE);
 }
+
 static void glyros_set_enabled(int enabled)
 {
 	cfg_set_single_value_as_int(config, LOG_SUBCLASS, "enable", enabled);
@@ -118,7 +123,6 @@ static glyros_set_proxy(GlyQuery * q)
 				if(proxystring != NULL)
 				{
 					GlyOpt_proxy(q,proxystring);
-					puts(proxystring);
 					free(proxystring);
 				}
 			}
@@ -218,7 +222,7 @@ static gpointer glyros_fetch_thread(void * data)
 			}
 			else if (thread_data->type == META_ALBUM_TXT &&
 				 thread_data->song->album != NULL    &&
-				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_ALBUM_TXT,TRUE)) //---------
+				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_ALBUM_TXT,TRUE))
 			{
 				GlyOpt_type(&q, GET_ALBUM_REVIEW);
 				content_type = META_DATA_CONTENT_TEXT;
@@ -249,16 +253,6 @@ static gpointer glyros_fetch_thread(void * data)
 			}
 		}
 	}
-
-	/* debug info */
-	printf(
-			"Artist: %s\n"
-			"Title: %s\n"
-			"Album: %s\n", 
-			thread_data->song->artist, 
-			thread_data->song->title, 
-			thread_data->song->album
-	      );
 
 	/* For the start: Enable verbosity */
 	GlyOpt_verbosity(&q, 2);
@@ -314,12 +308,8 @@ static void glyros_fetch(mpd_Song *song,MetaDataType type,
 	data->callback = callback;
 	data->user_data = user_data;
 
-	pthread_t t;
-	pthread_create(&t,  NULL, glyros_fetch_thread, (void*)data);
-	//g_thread_create(glyros_fetch_thread, data, FALSE, NULL);
+	g_thread_create(glyros_fetch_thread, (gpointer)data, FALSE, NULL);  
 }
-
-
 
 static void pref_enable_fetch(GtkWidget *con, gpointer data)
 {
@@ -412,15 +402,12 @@ static gmpcPrefPlugin glyros_pref_object =
 {
 	.construct = pref_construct,
 	.destroy   = pref_destroy,
-	.padding1  = NULL,
-	.padding2  = NULL,
-	.padding3  = NULL
 };
 
 gmpcPlugin plugin =
 {
-	.name           = ("Glyros Allmetadata fetcher"),
-	.version        = {0,21,1},
+	.name           = ("Glyros 'allmetadata' fetcher plugin"),
+	.version        = {0,1,0},
 	.plugin_type    = GMPC_PLUGIN_META_DATA,
 	.init           = glyros_init,
 	.pref 		= &glyros_pref_object,
