@@ -29,9 +29,22 @@
 
 #define LOG_DOMAIN "Gmpc.Provider.Glyros"
 
+#define LOG_SUBCLASS        "glyros"
+#define LOG_COVER_NAME      "fetch-art-album"
+#define LOG_ARTIST_ART      "fetch-art-artist"
+#define LOG_SIMILIAR_ARTIST "fetch-similiar-artist"
+#define LOG_SIMILIAR_SONG   "fetch-similiar-song"
+#define LOG_SIMILIAR_GENRE  "fetch-similiar-genre"
+#define LOG_ARTIST_TXT      "fetch-biography-artist"
+#define LOG_SONG_TXT        "fetch-lyrics"
+#define LOG_ALBUM_TXT       "fetch-album-txt"
+
+
 gmpcPlugin glyros_plugin;
 
+/* API Version. Needed. */
 int plugin_api_version = PLUGIN_API_VERSION;
+
 static void glyros_init(void)
 {
 	Gly_init();
@@ -43,22 +56,23 @@ static struct glyros_fetch_thread_data
 	MetaDataType type;
 	void (*callback)(GList *list, gpointer data);
 	gpointer user_data;
-};
+} glyros_fetch_thread_data;
+
 static int glyros_fetch_cover_priority(void)
 {
-	return cfg_get_single_value_as_int_with_default(config, "cover-glyros", "priority", 100);
+	return cfg_get_single_value_as_int_with_default(config, LOG_SUBCLASS, "priority", 20);
 }
 static void glyros_fetch_cover_priority_set(int priority)
 {
-	cfg_set_single_value_as_int(config, "cover-glyros", "priority", priority);
+	cfg_set_single_value_as_int(config, LOG_SUBCLASS, "priority", priority);
 }
 static int glyros_get_enabled(void)
 {
-	return cfg_get_single_value_as_int_with_default(config, "cover-glyros", "enable", TRUE);
+	return cfg_get_single_value_as_int_with_default(config, LOG_SUBCLASS, "enable", TRUE);
 }
 static void glyros_set_enabled(int enabled)
 {
-	cfg_set_single_value_as_int(config, "cover-glyros", "enable", enabled);
+	cfg_set_single_value_as_int(config, LOG_SUBCLASS, "enable", enabled);
 }
 static gpointer glyros_fetch_thread(void * data)
 {
@@ -90,38 +104,50 @@ static gpointer glyros_fetch_thread(void * data)
 	{
 		if (thread_data->song->artist != NULL)
 		{
-			if (thread_data->type == META_ARTIST_ART)
+			if (thread_data->type == META_ARTIST_ART &&
+			    cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS, LOG_ARTIST_ART,TRUE))
 			{
 				GlyOpt_type(&q, GET_ARTIST_PHOTOS);
 				content_type = META_DATA_CONTENT_RAW;
 			}
-			else if (thread_data->type == META_ARTIST_TXT)
+			else if (thread_data->type == META_ARTIST_TXT &&
+				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_ARTIST_TXT,TRUE))
 			{
 				GlyOpt_type(&q, GET_ARTISTBIO);
 				content_type = META_DATA_CONTENT_TEXT;
 			}
-			else if (thread_data->type == META_ARTIST_SIMILAR) 
+			else if (thread_data->type == META_ARTIST_SIMILAR &&
+				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SIMILIAR_ARTIST,TRUE)) 
 			{
 				GlyOpt_type(&q, GET_SIMILIAR_ARTISTS);
 				content_type = META_DATA_CONTENT_TEXT;
 			}
-			else if (thread_data->type == META_ALBUM_ART && thread_data->song->album != NULL)
+			else if (thread_data->type == META_ALBUM_ART &&
+				 thread_data->song->album != NULL    &&
+				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_COVER_NAME,TRUE))
 			{
 				GlyOpt_type(&q, GET_COVERART);
 				content_type = META_DATA_CONTENT_RAW;
 			}
-			else if (thread_data->type == META_ALBUM_TXT && thread_data->song->album != NULL)
+			else if (thread_data->type == META_ALBUM_TXT &&
+				 thread_data->song->album != NULL    &&
+				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_ALBUM_TXT,TRUE)) //---------
 			{
-				/* not supported */
+				GlyOpt_type(&q, GET_ALBUM_REVIEW);
+				content_type = META_DATA_CONTENT_TEXT;
 			}
-			else if (thread_data->type == META_SONG_TXT && thread_data->song->title != NULL)
+			else if (thread_data->type == META_SONG_TXT &&
+				 thread_data->song->title != NULL   &&
+				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SONG_TXT,TRUE)) 
 			{
 				GlyOpt_type(&q, GET_LYRICS);
 				content_type = META_DATA_CONTENT_TEXT;
 			}
-			else if (thread_data->type == META_SONG_SIMILAR && thread_data->song->title != NULL)
+			else if (thread_data->type == META_SONG_SIMILAR && 
+				 thread_data->song->title != NULL       &&
+				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SIMILIAR_SONG,TRUE))
 			{
-				/* not supported */
+				/* not yet supported */
 			}
 			else if (thread_data->type == META_SONG_GUITAR_TAB && thread_data->song->title != NULL)
 			{
@@ -166,15 +192,12 @@ static gpointer glyros_fetch_thread(void * data)
 		mtd->size = cache->size;	
 		retv = g_list_prepend(retv,mtd);
 
-		puts("PRE");
 		thread_data->callback(retv, thread_data->user_data);
 
-		// SEE IT!
 		//g_list_free(retv);
 		Gly_free_list(cache);
 		Gly_destroy_query(&q);
 		free(data);
-		puts("AFTER");
 		return NULL;
 	}
 
@@ -186,6 +209,7 @@ static gpointer glyros_fetch_thread(void * data)
 
 	return NULL;
 }
+
 static void glyros_fetch(mpd_Song *song,MetaDataType type, 
 		void (*callback)(GList *list, gpointer data),
 		gpointer user_data)
@@ -199,7 +223,89 @@ static void glyros_fetch(mpd_Song *song,MetaDataType type,
 
 	pthread_t t;
 	pthread_create(&t,  NULL, glyros_fetch_thread, (void*)data);
-	//	g_thread_create(glyros_fetch_thread, data, FALSE, NULL);
+	//g_thread_create(glyros_fetch_thread, data, FALSE, NULL);
+}
+
+
+
+static void pref_enable_fetch(GtkWidget *con, gpointer data)
+{
+	MetaDataType type = GPOINTER_TO_INT(data);
+	int state = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(con));
+	switch(type) {
+		case META_ARTIST_ART:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_ARTIST_ART,state); 
+			break;
+		case META_ALBUM_ART:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_COVER_NAME,state); 
+			break;
+		case META_ARTIST_SIMILAR:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_SIMILIAR_ARTIST, state); 
+			break;
+		case META_SONG_SIMILAR:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_SIMILIAR_SONG,state); 
+			break;                                                                                 
+		case META_GENRE_SIMILAR:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_SIMILIAR_GENRE, state);
+			break;
+		case META_ARTIST_TXT:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_ARTIST_TXT,state); 
+			break;                                                  
+		case META_SONG_TXT:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_SONG_TXT,state); 
+			break;
+		case META_ALBUM_TXT:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_ALBUM_TXT,state);
+			break;
+		default:
+			break;
+	}
+}
+
+static void pref_add_checkbox(const char * text, MetaDataType type, const char * log_to, GtkWidget * vbox) 
+{
+	GtkWidget * toggleb = gtk_check_button_new_with_label(text);    
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggleb),
+	cfg_get_single_value_as_int_with_default(config, LOG_SUBCLASS, log_to, TRUE)); 
+	gtk_box_pack_start(GTK_BOX(vbox), toggleb, FALSE, TRUE, 0);
+	g_signal_connect(G_OBJECT(toggleb), "toggled", G_CALLBACK(pref_enable_fetch), GINT_TO_POINTER(type));
+}
+
+static void pref_construct(GtkWidget * con)
+{
+	GtkWidget * frame = gtk_frame_new("");
+	gtk_label_set_markup(GTK_LABEL(gtk_frame_get_label_widget(GTK_FRAME(frame))), "<b>Fetch</b>");
+	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_NONE);
+	GtkWidget * vbox = gtk_vbox_new(FALSE,6);
+	gtk_container_set_border_width(GTK_CONTAINER(vbox), 12);
+	gtk_container_add(GTK_CONTAINER(frame), vbox);
+
+	pref_add_checkbox("Artist Images",META_ARTIST_ART,LOG_ARTIST_ART,vbox);
+	pref_add_checkbox("Artist Biography",META_ARTIST_TXT,LOG_ARTIST_TXT,vbox);
+	pref_add_checkbox("Similiar artist",META_ARTIST_SIMILAR,LOG_SIMILIAR_ARTIST,vbox);
+	pref_add_checkbox("Album cover",META_ALBUM_ART,LOG_COVER_NAME,vbox);
+	pref_add_checkbox("Songlyrics",META_SONG_TXT,LOG_SONG_TXT,vbox);
+	pref_add_checkbox("Album information",META_ALBUM_TXT,LOG_ALBUM_TXT,vbox);
+/*
+	// Missing support for:
+	pref_add_checkbox("Similiar songs",META_SONG_SIMILAR,LOG_SIMILIAR_SONG,vbox);
+	pref_add_checkbox("Similiar genre",META_GENRE_SIMILAR,LOG_SIMILIAR_GENRE,vbox);
+*/
+
+	if(!glyros_get_enabled()) {
+		gtk_widget_set_sensitive(GTK_WIDGET(vbox), FALSE);
+	}
+
+	gtk_widget_show_all(frame);
+	gtk_container_add(GTK_CONTAINER(con), frame);
+} 
+
+static void pref_destroy(GtkWidget *con)
+{
+	GtkWidget *child = gtk_bin_get_child(GTK_BIN(con));
+	if(child) {
+		gtk_container_remove(GTK_CONTAINER(con), child);
+	}
 }
 
 static gmpcMetaDataPlugin glyros_metadata_object =
@@ -209,12 +315,22 @@ static gmpcMetaDataPlugin glyros_metadata_object =
 	.get_metadata   = glyros_fetch
 };
 
+static gmpcPrefPlugin glyros_pref_object = 
+{
+	.construct = pref_construct,
+	.destroy   = pref_destroy,
+	.padding1  = NULL,
+	.padding2  = NULL,
+	.padding3  = NULL
+};
+
 gmpcPlugin plugin =
 {
-	.name           = ("Glyros Artist and Album Image Fetcher"),
-	.version        = {0,21,0},
+	.name           = ("Glyros Allmetadata fetcher"),
+	.version        = {0,21,1},
 	.plugin_type    = GMPC_PLUGIN_META_DATA,
 	.init           = glyros_init,
+	.pref 		= &glyros_pref_object,
 	.metadata       = &glyros_metadata_object,
 	.get_enabled    = glyros_get_enabled,
 	.set_enabled    = glyros_set_enabled,
