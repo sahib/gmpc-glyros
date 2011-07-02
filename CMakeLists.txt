@@ -17,6 +17,7 @@ INCLUDE_DIRECTORIES("/usr/include/gmpc")
 ADD_LIBRARY(gmpc-glyros SHARED src/plugin.c)
 TARGET_LINK_LIBRARIES(gmpc-glyros glyr) 
 TARGET_LINK_LIBRARIES(gmpc-glyros ${GTK2_LIBRARIES}) 
+TARGET_LINK_LIBRARIES(gmpc-glyros glib-2.0)
 ADD_CUSTOM_COMMAND (
 		TARGET gmpc-glyros 
 		POST_BUILD

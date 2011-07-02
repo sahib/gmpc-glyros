@@ -194,7 +194,6 @@ static gpointer glyros_fetch_thread(void * data)
 
 		thread_data->callback(retv, thread_data->user_data);
 
-		//g_list_free(retv);
 		Gly_free_list(cache);
 		Gly_destroy_query(&q);
 		free(data);
@@ -221,9 +220,7 @@ static void glyros_fetch(mpd_Song *song,MetaDataType type,
 	data->callback = callback;
 	data->user_data = user_data;
 
-	pthread_t t;
-	pthread_create(&t,  NULL, glyros_fetch_thread, (void*)data);
-	//g_thread_create(glyros_fetch_thread, data, FALSE, NULL);
+	g_thread_create(glyros_fetch_thread, (gpointer)data, FALSE, NULL);  
 }
 
 
