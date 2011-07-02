@@ -125,6 +125,37 @@ static glyros_set_proxy(GlyQuery * q)
 		}
 	}	
 }
+
+static MetaData * glyros_get_similiar_artist_names(GlyMemCache * cache)
+{
+	MetaData * mtd = NULL;
+	while(cache != NULL)
+	{
+		if(cache->data != NULL) 
+		{
+			gchar ** split = g_strsplit(cache->data,"\n",0);
+			if(split != NULL) 
+			{
+				puts(split[0]);
+
+
+				if(!mtd) {
+					mtd = meta_data_new();
+					mtd->type = META_ARTIST_SIMILAR;
+					mtd->plugin_name = glyros_plugin.name;
+					mtd->content_type = META_DATA_CONTENT_TEXT_LIST;
+					mtd->size = 0;
+				}
+				mtd->size++;
+				mtd->content = g_list_prepend((GList*) mtd->content, g_strdup((char *)split[0]));
+				g_strfreev(split);
+			}
+		}
+		cache = cache->next;
+	}
+	return mtd;
+}
+
 static gpointer glyros_fetch_thread(void * data)
 {
 	/* arguments */
@@ -174,6 +205,7 @@ static gpointer glyros_fetch_thread(void * data)
 				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SIMILIAR_ARTIST,TRUE)) 
 			{
 				GlyOpt_type(&q, GET_SIMILIAR_ARTISTS);
+				GlyOpt_number(&q, 20);
 				content_type = META_DATA_CONTENT_TEXT;
 			}
 			else if (thread_data->type == META_ALBUM_ART &&
@@ -181,6 +213,7 @@ static gpointer glyros_fetch_thread(void * data)
 				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_COVER_NAME,TRUE))
 			{
 				GlyOpt_type(&q, GET_COVERART);
+				GlyOpt_cminsize(&q, 100);
 				content_type = META_DATA_CONTENT_RAW;
 			}
 			else if (thread_data->type == META_ALBUM_TXT &&
@@ -234,33 +267,39 @@ static gpointer glyros_fetch_thread(void * data)
 	cache = Gly_get(&q,NULL,NULL);
 
 	/* something there? */
+	GList * retv = NULL;
 	if (cache != NULL)
 	{
-		GList *retv = NULL;
-		MetaData *mtd = meta_data_new();
-		mtd->type = thread_data->type; 
-		mtd->plugin_name = glyros_plugin.name;
-		mtd->content_type = content_type; 
-		mtd->content = malloc(cache->size);
-		memcpy(mtd->content, cache->data, cache->size);
-		mtd->size = cache->size;	
-		retv = g_list_prepend(retv,mtd);
+		if(thread_data->type == META_ARTIST_SIMILAR)
+		{
+			MetaData * cont = glyros_get_similiar_artist_names(cache);
+			if(cont != NULL) 
+			{
+				retv = g_list_prepend(retv,cont);
+			}
+		}
+		else
+		{
+			MetaData *mtd = meta_data_new();
+			mtd->type = thread_data->type; 
+			mtd->plugin_name = glyros_plugin.name;
+			mtd->content_type = content_type; 
 
-		thread_data->callback(retv, thread_data->user_data);
+			mtd->content = malloc(cache->size);
+			memcpy(mtd->content, cache->data, cache->size);
+			mtd->size = cache->size;	
 
-		//g_list_free(retv);
+			retv = g_list_prepend(retv,mtd);
+		}
+
 		Gly_free_list(cache);
-		Gly_destroy_query(&q);
-		free(data);
-		return NULL;
 	}
 
 	/* destroy */
 	Gly_destroy_query(&q);
 	free(data);
 
-	thread_data->callback(NULL, thread_data->user_data);
-
+	thread_data->callback(retv, thread_data->user_data);
 	return NULL;
 }
 
