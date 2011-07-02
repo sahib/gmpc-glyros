@@ -74,6 +74,57 @@ static void glyros_set_enabled(int enabled)
 {
 	cfg_set_single_value_as_int(config, LOG_SUBCLASS, "enable", enabled);
 }
+
+static glyros_set_proxy(GlyQuery * q)
+{
+/*
+	[Network Settings]
+	Use Proxy="1"
+	Proxy Port="8080"
+	Use authentication="1"
+	Proxy Address="http://Proxy-fh-hof.de"
+	Proxy authentication username="aegsg"
+	Proxy authentication password="egedhh"
+	[]
+
+	=> [protocol://][user:pass@]Domain[:port]
+*/
+	if(q != NULL)
+	{
+		const char * sublcass = "Network Settings";
+		if(cfg_get_single_value_as_int_with_default(config,sublcass,"Use Proxy",FALSE)) 
+		{
+			char * port = cfg_get_single_value_as_string_with_default(config,sublcass,"Proxy Port","8080");
+			char * addr = cfg_get_single_value_as_string_with_default(config,sublcass,"Proxy Address","localhost");
+	
+			char * user = "", * passwd = "";
+			if(cfg_get_single_value_as_int_with_default(config,sublcass,"Use Proxy",FALSE)) 
+			{ 
+				user   = cfg_get_single_value_as_string_with_default(config,sublcass,"Proxy authentication username","");
+				passwd = cfg_get_single_value_as_string_with_default(config,sublcass,"Proxy authentication password","");
+			}
+
+			if(port != NULL && addr != NULL) 
+			{
+				/* remove protocol if present , it's not used. */
+				char * proto;
+				if((proto = strstr(addr,"://"))) 
+				{
+					proto += 3;
+					addr = proto;
+				}
+
+				char * proxystring = g_strdup_printf("%s:%s@%s:%s",user,passwd,addr,port);
+				if(proxystring != NULL)
+				{
+					GlyOpt_proxy(q,proxystring);
+					puts(proxystring);
+					free(proxystring);
+				}
+			}
+		}
+	}	
+}
 static gpointer glyros_fetch_thread(void * data)
 {
 	/* arguments */
@@ -95,6 +146,9 @@ static gpointer glyros_fetch_thread(void * data)
 	GlyOpt_artist(&q,(char*)thread_data->song->artist);
 	GlyOpt_album (&q,(char*)thread_data->song->album);
 	GlyOpt_title (&q,(char*)thread_data->song->title);
+
+	/* Set proxy */
+	glyros_set_proxy(&q);
 
 	/* set default type */
 	GlyOpt_type(&q, GET_UNSURE);
