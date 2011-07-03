@@ -39,7 +39,7 @@
 #define LOG_ARTIST_TXT      "fetch-biography-artist"
 #define LOG_SONG_TXT        "fetch-lyrics"
 #define LOG_ALBUM_TXT       "fetch-album-txt"
-
+#define LOG_FUZZYNESS       "fuzzyness"
 
 gmpcPlugin glyros_plugin;
 
@@ -58,7 +58,7 @@ static struct glyros_fetch_thread_data
 	MetaDataType type;
 	void (*callback)(GList *list, gpointer data);
 	gpointer user_data;
-} glyros_fetch_thread_data; /* do not use it !!! just fix a warning */
+} glyros_fetch_thread_data; /* do not use it! just fix a warning */
 
 static int glyros_fetch_cover_priority(void)
 {
@@ -82,18 +82,6 @@ static void glyros_set_enabled(int enabled)
 
 static glyros_set_proxy(GlyQuery * q)
 {
-/*
-	[Network Settings]
-	Use Proxy="1"
-	Proxy Port="8080"
-	Use authentication="1"
-	Proxy Address="http://Proxy-fh-hof.de"
-	Proxy authentication username="aegsg"
-	Proxy authentication password="egedhh"
-	[]
-
-	=> [protocol://][user:pass@]Domain[:port]
-*/
 	if(q != NULL)
 	{
 		const char * sublcass = "Network Settings";
@@ -101,7 +89,7 @@ static glyros_set_proxy(GlyQuery * q)
 		{
 			char * port = cfg_get_single_value_as_string_with_default(config,sublcass,"Proxy Port","8080");
 			char * addr = cfg_get_single_value_as_string_with_default(config,sublcass,"Proxy Address","localhost");
-	
+
 			char * user = "", * passwd = "";
 			if(cfg_get_single_value_as_int_with_default(config,sublcass,"Use Proxy",FALSE)) 
 			{ 
@@ -181,6 +169,7 @@ static gpointer glyros_fetch_thread(void * data)
 	GlyOpt_artist(&q,(char*)thread_data->song->artist);
 	GlyOpt_album (&q,(char*)thread_data->song->album);
 	GlyOpt_title (&q,(char*)thread_data->song->title);
+	GlyOpt_fuzzyness(&q,cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_FUZZYNESS,6));
 
 	/* Set proxy */
 	glyros_set_proxy(&q);
@@ -194,49 +183,49 @@ static gpointer glyros_fetch_thread(void * data)
 		if (thread_data->song->artist != NULL)
 		{
 			if (thread_data->type == META_ARTIST_ART &&
-			    cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS, LOG_ARTIST_ART,TRUE))
+					cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS, LOG_ARTIST_ART,TRUE))
 			{
 				GlyOpt_type(&q, GET_ARTIST_PHOTOS);
 				content_type = META_DATA_CONTENT_RAW;
 			}
 			else if (thread_data->type == META_ARTIST_TXT &&
-				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_ARTIST_TXT,TRUE))
+					cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_ARTIST_TXT,TRUE))
 			{
 				GlyOpt_type(&q, GET_ARTISTBIO);
 				content_type = META_DATA_CONTENT_TEXT;
 			}
 			else if (thread_data->type == META_ARTIST_SIMILAR &&
-				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SIMILIAR_ARTIST,TRUE)) 
+					cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SIMILIAR_ARTIST,TRUE)) 
 			{
 				GlyOpt_type(&q, GET_SIMILIAR_ARTISTS);
 				GlyOpt_number(&q, 20);
 				content_type = META_DATA_CONTENT_TEXT;
 			}
 			else if (thread_data->type == META_ALBUM_ART &&
-				 thread_data->song->album != NULL    &&
-				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_COVER_NAME,TRUE))
+					thread_data->song->album != NULL    &&
+					cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_COVER_NAME,TRUE))
 			{
 				GlyOpt_type(&q, GET_COVERART);
 				GlyOpt_cminsize(&q, 100);
 				content_type = META_DATA_CONTENT_RAW;
 			}
 			else if (thread_data->type == META_ALBUM_TXT &&
-				 thread_data->song->album != NULL    &&
-				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_ALBUM_TXT,TRUE))
+					thread_data->song->album != NULL    &&
+					cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_ALBUM_TXT,TRUE))
 			{
 				GlyOpt_type(&q, GET_ALBUM_REVIEW);
 				content_type = META_DATA_CONTENT_TEXT;
 			}
 			else if (thread_data->type == META_SONG_TXT &&
-				 thread_data->song->title != NULL   &&
-				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SONG_TXT,TRUE)) 
+					thread_data->song->title != NULL   &&
+					cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SONG_TXT,TRUE)) 
 			{
 				GlyOpt_type(&q, GET_LYRICS);
 				content_type = META_DATA_CONTENT_TEXT;
 			}
 			else if (thread_data->type == META_SONG_SIMILAR && 
-				 thread_data->song->title != NULL       &&
-				 cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SIMILIAR_SONG,TRUE))
+					thread_data->song->title != NULL       &&
+					cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SIMILIAR_SONG,TRUE))
 			{
 				/* not yet supported */
 			}
@@ -311,6 +300,15 @@ static void glyros_fetch(mpd_Song *song,MetaDataType type,
 	g_thread_create(glyros_fetch_thread, (gpointer)data, FALSE, NULL);  
 }
 
+
+/* GTK* Stuff for bulding the preferences dialog */
+static void pref_spinner_callback(GtkSpinButton * spin, gpointer data) 
+{
+	int val = gtk_spin_button_get_value_as_int(spin);	
+	cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_FUZZYNESS,val);
+}
+
+
 static void pref_enable_fetch(GtkWidget *con, gpointer data)
 {
 	MetaDataType type = GPOINTER_TO_INT(data);
@@ -369,11 +367,19 @@ static void pref_construct(GtkWidget * con)
 	pref_add_checkbox("Album cover",META_ALBUM_ART,LOG_COVER_NAME,vbox);
 	pref_add_checkbox("Songlyrics",META_SONG_TXT,LOG_SONG_TXT,vbox);
 	pref_add_checkbox("Album information",META_ALBUM_TXT,LOG_ALBUM_TXT,vbox);
-/*
 	// Missing support for:
-	pref_add_checkbox("Similiar songs",META_SONG_SIMILAR,LOG_SIMILIAR_SONG,vbox);
-	pref_add_checkbox("Similiar genre",META_GENRE_SIMILAR,LOG_SIMILIAR_GENRE,vbox);
-*/
+	// pref_add_checkbox("Similiar songs",META_SONG_SIMILAR,LOG_SIMILIAR_SONG,vbox);
+	// pref_add_checkbox("Similiar genre",META_GENRE_SIMILAR,LOG_SIMILIAR_GENRE,vbox);
+
+	GtkWidget * hbox_cont  = gtk_hbox_new(FALSE,2);
+	GtkWidget * fuzz_label = gtk_label_new("Fuzzyness factor: "); 
+	GtkWidget * spinner = GTK_WIDGET(gtk_spin_button_new_with_range(0.0,42.0,1.0));
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(spinner),(gdouble) cfg_get_single_value_as_int_with_default(config, LOG_SUBCLASS, LOG_FUZZYNESS,6));
+	gtk_box_pack_start(GTK_BOX(vbox), hbox_cont, FALSE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_cont), fuzz_label, FALSE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_cont), spinner, FALSE,TRUE,0);
+	g_signal_connect(G_OBJECT(spinner), "value-changed", G_CALLBACK(pref_spinner_callback), NULL);
+
 
 	if(!glyros_get_enabled()) {
 		gtk_widget_set_sensitive(GTK_WIDGET(vbox), FALSE);
