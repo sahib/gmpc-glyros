@@ -158,24 +158,25 @@ static MetaData * glyros_get_similiar_song_names(GlyMemCache * cache)
 		if(cache->data != NULL) 
 		{
 			gchar ** split = g_strsplit(cache->data,"\n",0);
-			if(split != NULL) 
+			if(split != NULL && split[0] != NULL) 
 			{
 				if(!mtd) {
 					mtd = meta_data_new();
-					mtd->type = META_ARTIST_SIMILAR;
+					mtd->type = META_SONG_SIMILAR;
 					mtd->plugin_name = glyros_plugin.name;
 					mtd->content_type = META_DATA_CONTENT_TEXT_LIST;
 					mtd->size = 0;
 				}
 
                                 int len = 0;
-                                char * buffer = malloc(len=strlen(split[1])+2+strlen(split[0])+1);
-                                snprintf(buffer, len, "%s::%s", split[1], split[0]);
+                                gchar * buffer = g_malloc(len=strlen(split[1])+2+strlen(split[0])+1);
+                                g_snprintf(buffer, len, "%s::%s", split[1], split[0]);
+                                printf("%s\n", buffer);
 
 				mtd->size++;
 				mtd->content = g_list_append((GList*) mtd->content, g_strdup((char *)buffer));
 				g_strfreev(split);
-                                free(buffer);
+                                g_free(buffer);
 			}
 		}
 		cache = cache->next;
@@ -267,7 +268,7 @@ static gpointer glyros_fetch_thread(void * data)
 					cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SIMILIAR_SONG,TRUE))
 			{
 				GlyOpt_type(&q, GET_SIMILIAR_SONGS);
-				content_type = META_DATA_CONTENT_TEXT_LIST;
+				GlyOpt_number(&q, cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_MSIMILIARTIST,20));
 			}
 			else if (thread_data->type == META_SONG_GUITAR_TAB && thread_data->song->title != NULL)
 			{
@@ -303,6 +304,7 @@ static gpointer glyros_fetch_thread(void * data)
 		}
                 else if (thread_data->type == META_SONG_SIMILAR)
                 {
+			GlyOpt_type(&q, GET_SIMILIAR_SONGS);
                         MetaData * cont = glyros_get_similiar_song_names(cache);
                         if (cont != NULL)
                         {
