@@ -1,4 +1,4 @@
-.h1 GMPC-GLYROS
+<h1>GMPC-GLYROS</h1>
 
 A plugin for the popular Gnome Music Player Client (gmpc), using the unknown and infamous libglyr library
 to fetch reliable all sort of metadata, including lyrics, cover, artist photo, album reviews, artist bio and similiar artists. 
