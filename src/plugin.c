@@ -39,8 +39,13 @@
 #define LOG_ARTIST_TXT      "fetch-biography-artist"
 #define LOG_SONG_TXT        "fetch-lyrics"
 #define LOG_ALBUM_TXT       "fetch-album-txt"
-#define LOG_FUZZYNESS       "fuzzyness"
+// other
+#define LOG_FUZZYNESS      "fuzzyness"
+#define LOG_CMINSIZE       "cminsize"
+#define LOG_CMAXSIZE       "cmaxsize"
+#define LOG_MSIMILIARTIST  "msimiliartist"
 
+/* plugi, getting catched via 'extern' */
 gmpcPlugin glyros_plugin;
 
 /* API Version. Needed. */
@@ -128,9 +133,6 @@ static MetaData * glyros_get_similiar_artist_names(GlyMemCache * cache)
 			gchar ** split = g_strsplit(cache->data,"\n",0);
 			if(split != NULL) 
 			{
-				puts(split[0]);
-
-
 				if(!mtd) {
 					mtd = meta_data_new();
 					mtd->type = META_ARTIST_SIMILAR;
@@ -139,7 +141,7 @@ static MetaData * glyros_get_similiar_artist_names(GlyMemCache * cache)
 					mtd->size = 0;
 				}
 				mtd->size++;
-				mtd->content = g_list_prepend((GList*) mtd->content, g_strdup((char *)split[0]));
+				mtd->content = g_list_append((GList*) mtd->content, g_strdup((char *)split[0]));
 				g_strfreev(split);
 			}
 		}
@@ -169,7 +171,11 @@ static gpointer glyros_fetch_thread(void * data)
 	GlyOpt_artist(&q,(char*)thread_data->song->artist);
 	GlyOpt_album (&q,(char*)thread_data->song->album);
 	GlyOpt_title (&q,(char*)thread_data->song->title);
+
+	/* ask preferences */
 	GlyOpt_fuzzyness(&q,cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_FUZZYNESS,6));
+	GlyOpt_cminsize(&q,cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_CMINSIZE,100));
+	GlyOpt_cmaxsize(&q,cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_CMAXSIZE,-1));
 
 	/* Set proxy */
 	glyros_set_proxy(&q);
@@ -198,7 +204,7 @@ static gpointer glyros_fetch_thread(void * data)
 					cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SIMILIAR_ARTIST,TRUE)) 
 			{
 				GlyOpt_type(&q, GET_SIMILIAR_ARTISTS);
-				GlyOpt_number(&q, 20);
+				GlyOpt_number(&q, cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_MSIMILIARTIST,20));
 				content_type = META_DATA_CONTENT_TEXT;
 			}
 			else if (thread_data->type == META_ALBUM_ART &&
@@ -301,14 +307,6 @@ static void glyros_fetch(mpd_Song *song,MetaDataType type,
 }
 
 
-/* GTK* Stuff for bulding the preferences dialog */
-static void pref_spinner_callback(GtkSpinButton * spin, gpointer data) 
-{
-	int val = gtk_spin_button_get_value_as_int(spin);	
-	cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_FUZZYNESS,val);
-}
-
-
 static void pref_enable_fetch(GtkWidget *con, gpointer data)
 {
 	MetaDataType type = GPOINTER_TO_INT(data);
@@ -347,9 +345,53 @@ static void pref_add_checkbox(const char * text, MetaDataType type, const char *
 {
 	GtkWidget * toggleb = gtk_check_button_new_with_label(text);    
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggleb),
-	cfg_get_single_value_as_int_with_default(config, LOG_SUBCLASS, log_to, TRUE)); 
+			cfg_get_single_value_as_int_with_default(config, LOG_SUBCLASS, log_to, TRUE)); 
 	gtk_box_pack_start(GTK_BOX(vbox), toggleb, FALSE, TRUE, 0);
 	g_signal_connect(G_OBJECT(toggleb), "toggled", G_CALLBACK(pref_enable_fetch), GINT_TO_POINTER(type));
+}
+
+/* GTK* Stuff for bulding the preferences dialog */
+enum SPINNER_CHOICES 
+{
+	OPT_FUZZYNESS,
+	OPT_CMINSIZE,
+	OPT_CMAXSIZE,
+	OPT_MSIMILIARTIST
+};
+
+static void pref_spinner_callback(GtkSpinButton * spin, gpointer data) 
+{
+	int val = gtk_spin_button_get_value_as_int(spin);
+	enum SPINNER_CHOICES ch = GPOINTER_TO_INT(data);	
+	switch(ch) 
+	{
+		case OPT_FUZZYNESS:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_FUZZYNESS,val);
+			break;
+		case OPT_CMINSIZE:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_CMINSIZE,val);
+			break;
+		case OPT_CMAXSIZE:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_CMAXSIZE,val);
+			break;
+		case OPT_MSIMILIARTIST:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_MSIMILIARTIST,val);
+			break; 
+		default:
+			break;
+	}
+}
+
+static void pref_add_spinbutton(const char * descr, const char * log_to, int default_to, double low, double high, GtkWidget * vbox, enum SPINNER_CHOICES choice)
+{
+	GtkWidget * hbox_cont  = gtk_hbox_new(FALSE,2);
+	GtkWidget * descr_label = gtk_label_new(descr); 
+	GtkWidget * spinner = GTK_WIDGET(gtk_spin_button_new_with_range(low,high,1.0));
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(spinner),(gdouble) cfg_get_single_value_as_int_with_default(config, LOG_SUBCLASS, log_to, default_to));
+	gtk_box_pack_start(GTK_BOX(vbox), hbox_cont, FALSE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_cont), descr_label, FALSE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_cont), spinner, FALSE,TRUE,0);
+	g_signal_connect(G_OBJECT(spinner), "value-changed", G_CALLBACK(pref_spinner_callback), GINT_TO_POINTER(choice));
 }
 
 static void pref_construct(GtkWidget * con)
@@ -368,18 +410,14 @@ static void pref_construct(GtkWidget * con)
 	pref_add_checkbox("Songlyrics",META_SONG_TXT,LOG_SONG_TXT,vbox);
 	pref_add_checkbox("Album information",META_ALBUM_TXT,LOG_ALBUM_TXT,vbox);
 	// Missing support for:
-	// pref_add_checkbox("Similiar songs",META_SONG_SIMILAR,LOG_SIMILIAR_SONG,vbox);
-	// pref_add_checkbox("Similiar genre",META_GENRE_SIMILAR,LOG_SIMILIAR_GENRE,vbox);
+	// pref_add_checkbox("Similiar songs",META_SONG_SIMILAR,LOG_SIMILIAR_SONG,vbox); // -> seb
+	// pref_add_checkbox("Similiar genre",META_GENRE_SIMILAR,LOG_SIMILIAR_GENRE,vbox); // -> unsure
+	// pref_add_checkbox("Guitar tabs",...); // support unsure
 
-	GtkWidget * hbox_cont  = gtk_hbox_new(FALSE,2);
-	GtkWidget * fuzz_label = gtk_label_new("Fuzzyness factor: "); 
-	GtkWidget * spinner = GTK_WIDGET(gtk_spin_button_new_with_range(0.0,42.0,1.0));
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(spinner),(gdouble) cfg_get_single_value_as_int_with_default(config, LOG_SUBCLASS, LOG_FUZZYNESS,6));
-	gtk_box_pack_start(GTK_BOX(vbox), hbox_cont, FALSE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_cont), fuzz_label, FALSE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_cont), spinner, FALSE,TRUE,0);
-	g_signal_connect(G_OBJECT(spinner), "value-changed", G_CALLBACK(pref_spinner_callback), NULL);
-
+	pref_add_spinbutton("Fuzzyness factor:      ",LOG_FUZZYNESS,6,0.0,42.0,vbox,OPT_FUZZYNESS);
+	pref_add_spinbutton("Minimal cover size:    ",LOG_CMINSIZE,100,-1.0,5000.0,vbox,OPT_CMINSIZE);
+	pref_add_spinbutton("Maxmimal cover size:   ",LOG_CMAXSIZE,-1,-1.0,5001.0,vbox,OPT_CMAXSIZE);
+	pref_add_spinbutton("Max. similiar artists: ",LOG_MSIMILIARTIST,20,0.0,20.0,vbox,OPT_MSIMILIARTIST);
 
 	if(!glyros_get_enabled()) {
 		gtk_widget_set_sensitive(GTK_WIDGET(vbox), FALSE);
