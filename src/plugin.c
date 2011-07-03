@@ -44,6 +44,7 @@
 #define LOG_CMINSIZE       "cminsize"
 #define LOG_CMAXSIZE       "cmaxsize"
 #define LOG_MSIMILIARTIST  "msimiliartist"
+#define LOG_MSIMILISONG    "msimilisong"
 
 /* plugi, getting catched via 'extern' */
 gmpcPlugin glyros_plugin;
@@ -268,7 +269,7 @@ static gpointer glyros_fetch_thread(void * data)
 					cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SIMILIAR_SONG,TRUE))
 			{
 				GlyOpt_type(&q, GET_SIMILIAR_SONGS);
-				GlyOpt_number(&q, cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_MSIMILIARTIST,20));
+				GlyOpt_number(&q, cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_MSIMILISONG,20));
 			}
 			else if (thread_data->type == META_SONG_GUITAR_TAB && thread_data->song->title != NULL)
 			{
@@ -399,7 +400,8 @@ enum SPINNER_CHOICES
 	OPT_FUZZYNESS,
 	OPT_CMINSIZE,
 	OPT_CMAXSIZE,
-	OPT_MSIMILIARTIST
+	OPT_MSIMILIARTIST,
+	OPT_MSIMILISONG
 };
 
 static void pref_spinner_callback(GtkSpinButton * spin, gpointer data) 
@@ -419,6 +421,9 @@ static void pref_spinner_callback(GtkSpinButton * spin, gpointer data)
 			break;
 		case OPT_MSIMILIARTIST:
 			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_MSIMILIARTIST,val);
+			break; 
+		case OPT_MSIMILISONG:
+			cfg_set_single_value_as_int(config, LOG_SUBCLASS, LOG_MSIMILISONG,val);
 			break; 
 		default:
 			break;
@@ -453,14 +458,15 @@ static void pref_construct(GtkWidget * con)
 	pref_add_checkbox("Songlyrics",META_SONG_TXT,LOG_SONG_TXT,vbox);
 	pref_add_checkbox("Album information",META_ALBUM_TXT,LOG_ALBUM_TXT,vbox);
 	// Missing support for:
-	// pref_add_checkbox("Similiar songs",META_SONG_SIMILAR,LOG_SIMILIAR_SONG,vbox); // -> seb
+	//pref_add_checkbox("Similiar songs",META_SONG_SIMILAR,LOG_SIMILIAR_SONG,vbox); // -> seb
 	// pref_add_checkbox("Similiar genre",META_GENRE_SIMILAR,LOG_SIMILIAR_GENRE,vbox); // -> unsure
 	// pref_add_checkbox("Guitar tabs",...); // support unsure
 
 	pref_add_spinbutton("Fuzzyness factor:      ",LOG_FUZZYNESS,6,0.0,42.0,vbox,OPT_FUZZYNESS);
 	pref_add_spinbutton("Minimal cover size:    ",LOG_CMINSIZE,100,-1.0,5000.0,vbox,OPT_CMINSIZE);
 	pref_add_spinbutton("Maxmimal cover size:   ",LOG_CMAXSIZE,-1,-1.0,5001.0,vbox,OPT_CMAXSIZE);
-	pref_add_spinbutton("Max. similiar artists: ",LOG_MSIMILIARTIST,20,0.0,20.0,vbox,OPT_MSIMILIARTIST);
+	pref_add_spinbutton("Max. similiar artists: ",LOG_MSIMILIARTIST,20,0.0,1000.0,vbox,OPT_MSIMILIARTIST);
+	pref_add_spinbutton("Max. similiar songs:   ",LOG_MSIMILISONG,20,0.0,1000.0,vbox,OPT_MSIMILISONG);
 
 	if(!glyros_get_enabled()) {
 		gtk_widget_set_sensitive(GTK_WIDGET(vbox), FALSE);
