@@ -150,6 +150,39 @@ static MetaData * glyros_get_similiar_artist_names(GlyMemCache * cache)
 	return mtd;
 }
 
+static MetaData * glyros_get_similiar_song_names(GlyMemCache * cache)
+{
+	MetaData * mtd = NULL;
+	while(cache != NULL)
+	{
+		if(cache->data != NULL) 
+		{
+			gchar ** split = g_strsplit(cache->data,"\n",0);
+			if(split != NULL) 
+			{
+				if(!mtd) {
+					mtd = meta_data_new();
+					mtd->type = META_ARTIST_SIMILAR;
+					mtd->plugin_name = glyros_plugin.name;
+					mtd->content_type = META_DATA_CONTENT_TEXT_LIST;
+					mtd->size = 0;
+				}
+
+                                int len = 0;
+                                char * buffer = malloc(len=strlen(split[1])+2+strlen(split[0])+1);
+                                snprintf(buffer, len, "%s::%s", split[1], split[0]);
+
+				mtd->size++;
+				mtd->content = g_list_append((GList*) mtd->content, g_strdup((char *)buffer));
+				g_strfreev(split);
+                                free(buffer);
+			}
+		}
+		cache = cache->next;
+	}
+	return mtd;
+}
+
 static gpointer glyros_fetch_thread(void * data)
 {
 	/* arguments */
@@ -233,7 +266,8 @@ static gpointer glyros_fetch_thread(void * data)
 					thread_data->song->title != NULL       &&
 					cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_SIMILIAR_SONG,TRUE))
 			{
-				/* not yet supported */
+				GlyOpt_type(&q, GET_SIMILIAR_SONGS);
+				content_type = META_DATA_CONTENT_TEXT_LIST;
 			}
 			else if (thread_data->type == META_SONG_GUITAR_TAB && thread_data->song->title != NULL)
 			{
@@ -267,6 +301,14 @@ static gpointer glyros_fetch_thread(void * data)
 				retv = g_list_prepend(retv,cont);
 			}
 		}
+                else if (thread_data->type == META_SONG_SIMILAR)
+                {
+                        MetaData * cont = glyros_get_similiar_song_names(cache);
+                        if (cont != NULL)
+                        {
+                                retv = g_list_prepend(retv,cont);
+                        }
+                }
 		else
 		{
 			MetaData *mtd = meta_data_new();
