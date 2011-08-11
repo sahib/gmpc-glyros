@@ -50,6 +50,8 @@
 #define LOG_MSIMILISONG    "msimilisong"
 #define LOG_QSRATIO        "qsratio"
 #define LOG_PARALLEL       "parallel"
+#define LOG_USERAGENT      "useragent"
+#define LOG_FROM           "from"
 
 /* plugi, getting catched via 'extern' */
 gmpcPlugin glyros_plugin;
@@ -238,6 +240,8 @@ static gpointer glyros_fetch_thread(void * data)
 	glyr_opt_cmaxsize(&q,cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_CMAXSIZE,-1));
 	glyr_opt_qsratio(&q,cfg_get_single_value_as_float_with_default(config,LOG_SUBCLASS,LOG_QSRATIO,DEFAULT_QSRATIO)/100.0);
 	glyr_opt_parallel(&q,cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_PARALLEL,DEFAULT_PARALLEL));
+	glyr_opt_useragent(&q,cfg_get_single_value_as_string_with_default(config,LOG_SUBCLASS,LOG_USERAGENT,DEFAULT_USERAGENT));
+	glyr_opt_from(&q,cfg_get_single_value_as_string_with_default(config,LOG_SUBCLASS,LOG_FROM,NULL));
 
 #ifdef GLYROS_DEBUG
 	g_print("fuzz: %d\n",q.fuzzyness);
@@ -406,6 +410,7 @@ static gpointer glyros_fetch_thread(void * data)
 * @param callback 
 * @param user_data
 */
+
 static void glyros_fetch(mpd_Song *song,MetaDataType type, 
                 void (*callback)(GList *list, gpointer data),
                 gpointer user_data)
@@ -530,8 +535,39 @@ static void pref_add_spinbutton(const gchar * descr, const gchar * log_to, gdoub
 	g_signal_connect(G_OBJECT(spinner), "value-changed", G_CALLBACK(pref_spinner_callback), GINT_TO_POINTER(choice));
 }
 
+void text_value_changed_callback(GtkTextBuffer *textbuffer, gpointer user_data)
+{
+  	GtkTextIter start;
+  	GtkTextIter end;
+	gtk_text_buffer_get_bounds(textbuffer, &start, &end);
+
+	gchar * log_to = user_data;
+	
+	gchar * text_value = gtk_text_buffer_get_text(textbuffer,&start,&end,false);
+	cfg_set_single_value_as_string(config, LOG_SUBCLASS,LOG_USERAGENT,text_value);
+}
+
+static setup_text_view(const gchar * descr, const gchar * default_value, GtkBox * container, gchar * log_to)
+{
+	GtkBox * hbox = GTK_BOX(gtk_hbox_new(FALSE,2));
+	
+	GtkTextView * text_box = GTK_TEXT_VIEW(gtk_text_view_new());
+        GtkTextBuffer * buffer = gtk_text_view_get_buffer(text_box);
+	gtk_text_buffer_set_text (buffer, cfg_get_single_value_as_string_with_default(config, LOG_SUBCLASS, log_to,default_value), -1);
+
+	gtk_box_pack_start(hbox,gtk_label_new(descr),FALSE,TRUE,2);
+	gtk_box_pack_start(hbox,gtk_label_new(""),TRUE,TRUE,2);
+	gtk_box_pack_start(hbox,GTK_WIDGET(text_box),FALSE,TRUE,2);
+
+	gtk_box_pack_start(container,GTK_WIDGET(hbox),FALSE,TRUE,2);
+
+	g_signal_connect(G_OBJECT(gtk_text_view_get_buffer(text_box)),"changed", G_CALLBACK(text_value_changed_callback), log_to);
+}
+
 static void pref_construct(GtkWidget * con)
 {
+	GtkWidget * scrolled_window = gtk_scrolled_window_new(NULL,NULL);
+        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
 	GtkWidget * top_box = gtk_vbox_new(FALSE,2);
 
 	GtkWidget * checkbox_frame = gtk_frame_new("");
@@ -548,7 +584,9 @@ static void pref_construct(GtkWidget * con)
 	pref_add_checkbox("Songlyrics",META_SONG_TXT,LOG_SONG_TXT,vbox);
 	pref_add_checkbox("Album information",META_ALBUM_TXT,LOG_ALBUM_TXT,vbox);
 
-	GtkWidget * spinner_frame = gtk_frame_new("Miscellaneous Settings");
+	GtkWidget * spinner_frame = gtk_frame_new("");
+	gtk_label_set_markup(GTK_LABEL(gtk_frame_get_label_widget(GTK_FRAME(spinner_frame))), "<b>Miscellaneous Settings</b>");
+
 	GtkWidget * spin_vbox     = gtk_vbox_new(FALSE,6);
 	pref_add_spinbutton("Fuzzyness factor:      ",LOG_FUZZYNESS,DEFAULT_FUZZYNESS,0.0,42.0,spin_vbox,OPT_FUZZYNESS,1);
 	pref_add_spinbutton("Minimal cover size:    ",LOG_CMINSIZE,100,-1.0,5000.0,spin_vbox,OPT_CMINSIZE,1);
@@ -563,9 +601,19 @@ static void pref_construct(GtkWidget * con)
 		gtk_widget_set_sensitive(GTK_WIDGET(vbox), FALSE);
 	}
 
-	gtk_container_add(GTK_CONTAINER(con), top_box);
-	gtk_box_pack_start(GTK_BOX(top_box),checkbox_frame, FALSE, TRUE, 2);
-	gtk_box_pack_start(GTK_BOX(top_box),spinner_frame, FALSE, TRUE,  2);
+	GtkWidget * text_box_vbox  = gtk_vbox_new(FALSE,2);
+	GtkWidget * text_box_frame = gtk_frame_new("");
+	gtk_container_add(GTK_CONTAINER(text_box_frame),text_box_vbox);
+	gtk_label_set_markup(GTK_LABEL(gtk_frame_get_label_widget(GTK_FRAME(text_box_frame))), "<b>Less important</b>");
+	setup_text_view("Useragent: ","gmpc-glyros",GTK_BOX(text_box_vbox),LOG_USERAGENT);
+	setup_text_view("Allowed providers:","all;",GTK_BOX(text_box_vbox),LOG_FROM);
+
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window), top_box);
+	gtk_container_add(GTK_CONTAINER(con),scrolled_window);
+	gtk_box_pack_start(GTK_BOX(top_box),checkbox_frame, FALSE, TRUE,  2);
+	gtk_box_pack_start(GTK_BOX(top_box),spinner_frame,  FALSE, TRUE,  2);
+	gtk_box_pack_start(GTK_BOX(top_box),text_box_frame, FALSE, TRUE,  2);
+	
 	gtk_widget_show_all(con);
 } 
 

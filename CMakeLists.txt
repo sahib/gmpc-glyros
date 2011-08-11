@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 2.6)
 PROJECT(gmpc-glyros C )
 
-	SET( GMPC_GLYROS_VERSION_MAJOR "0")
-	SET( GMPC_GLYROS_VERSION_MINOR "1")
+SET( GMPC_GLYROS_VERSION_MAJOR "0")
+SET( GMPC_GLYROS_VERSION_MINOR "1")
+
+message("-- Make sure to install both gmpc-dev/header and libglyr first")
+message("-- Compiling will result in errors otherwise.")
 
 FIND_PACKAGE(GTK2 REQUIRED)
 
