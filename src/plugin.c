@@ -104,7 +104,7 @@ static void glyros_set_enabled(int enabled)
 *
 * @param q the glyr-query used in this job
 */
-static glyros_set_proxy(GlyQuery * q)
+static glyros_set_proxy(GlyrQuery * q)
 {
         if(q != NULL)
         {
@@ -142,7 +142,7 @@ static glyros_set_proxy(GlyQuery * q)
         }	
 }
 
-static MetaData * glyros_get_similiar_artist_names(GlyMemCache * cache)
+static MetaData * glyros_get_similiar_artist_names(GlyrMemCache * cache)
 {
 	MetaData * mtd = NULL;
 	while(cache != NULL)
@@ -169,7 +169,7 @@ static MetaData * glyros_get_similiar_artist_names(GlyMemCache * cache)
 	return mtd;
 }
 
-static MetaData * glyros_get_similiar_song_names(GlyMemCache * cache)
+static MetaData * glyros_get_similiar_song_names(GlyrMemCache * cache)
 {
 	MetaData * mtd = NULL;
 	while(cache != NULL)
@@ -218,10 +218,10 @@ static gpointer glyros_fetch_thread(void * data)
 	struct glyros_fetch_thread_data * thread_data = data;
 
 	/* cache */
-	GlyMemCache * cache = NULL;
+	GlyrMemCache * cache = NULL;
 
 	/* query */
-	GlyQuery q;
+	GlyrQuery q;
 
 	/* data type */
 	MetaDataContentType content_type = META_DATA_CONTENT_RAW;
