@@ -14,6 +14,7 @@ FIND_PACKAGE(GTK2 REQUIRED)
 			"src/config.h"
 		      )
 SET(CMAKE_INSTALL_PREFIX "/usr")
+ADD_DEFINITIONS(-Wall -W -Wno-unused-variable -Wno-unused-parameter -Wno-strict-prototypes -ggdb3)
 INCLUDE_DIRECTORIES(${GTK2_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES("/usr/include/libmpd-1.0")
 INCLUDE_DIRECTORIES("/usr/include/gmpc")
