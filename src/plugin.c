@@ -512,6 +512,12 @@ static void restore_defaults(GtkButton * button, gpointer user_data)
 	cfg_set_single_value_as_int(config,LOG_SUBCLASS,LOG_PARALLEL,GLYR_DEFAULT_PARALLEL);
 	cfg_set_single_value_as_string(config,LOG_SUBCLASS,LOG_USERAGENT,GLYR_DEFAULT_USERAGENT);
 	cfg_set_single_value_as_string(config,LOG_SUBCLASS,LOG_FROM,"all");
+
+	GtkWidget * spacer_label = user_data;
+	if(spacer_label != NULL)
+	{
+		gtk_label_set_text(GTK_LABEL(spacer_label),"Restored defaults. (Not yet displayed)");
+	}
 }
 
 static void pref_add_spinbutton(const gchar * descr, const gchar * log_to, gdouble default_to, gdouble low, gdouble high, GtkWidget * vbox, enum SPINNER_CHOICES choice, gdouble step)
@@ -615,9 +621,10 @@ static void pref_construct(GtkWidget * con)
 
 	GtkWidget * restore_hbox = gtk_hbox_new(FALSE,2);
 	GtkWidget * restore_button = gtk_button_new_with_label("Restore defaults");
-	g_signal_connect(restore_button,"clicked",G_CALLBACK(restore_defaults),NULL);
+	GtkWidget * space_label = gtk_label_new("");
+	g_signal_connect(restore_button,"clicked",G_CALLBACK(restore_defaults),space_label);
 
-	gtk_box_pack_start(GTK_BOX(restore_hbox),gtk_label_new(""), TRUE, TRUE, 2);
+	gtk_box_pack_start(GTK_BOX(restore_hbox),space_label, TRUE, TRUE, 2);
 	gtk_box_pack_start(GTK_BOX(restore_hbox),restore_button, FALSE, TRUE, 2);
 	gtk_box_pack_start(GTK_BOX(top_box), restore_hbox, FALSE, TRUE,  2);
 
