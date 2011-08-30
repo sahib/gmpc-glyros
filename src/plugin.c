@@ -325,7 +325,7 @@ static gpointer glyros_fetch_thread(void * data)
 	}
 
 	/* get metadata */
-	enum GLYR_ERROR err = GLYRE_OK;
+	GLYR_ERROR err = GLYRE_OK;
 	cache = glyr_get(&q,&err,NULL);
 
 #if GLYROS_DEBUG
