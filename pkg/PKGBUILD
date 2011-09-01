@@ -1,12 +1,11 @@
 # Maintainer: Christopher Pahl <sahib@online.de>
 # glyr PKGBUILD for glyr 
 pkgname=gmpc-glyros-git
-pkgver=20110830
+pkgver=20110901
 pkgrel=1
 pkgdesc="libglyr Metadata-Plugin for GMPC"
 arch=('i686' 'x86_64')
-depends=(glyr)
-provides=('gmpc-glyros-git')
+depends=(glyr gtk2)
 conflicts=('gmpc-glyros')
 makedepends=('git' 'cmake')
 license=('GPL3')
@@ -30,7 +29,8 @@ build()
     
     msg "Git checkout done."
     cd ${srcdir}/${_gitname}
-   
+    echo $(pwd)  
+ 
     cmake . -DCMAKE_INSTALL_PREFIX=/usr
     make || return 1
 }
