@@ -241,7 +241,7 @@ static gpointer glyros_fetch_thread(void * data)
 	glyr_opt_qsratio(&q,cfg_get_single_value_as_float_with_default(config,LOG_SUBCLASS,LOG_QSRATIO,GLYR_DEFAULT_QSRATIO*100.0)/100.0);
 	glyr_opt_parallel(&q,cfg_get_single_value_as_int_with_default(config,LOG_SUBCLASS,LOG_PARALLEL,GLYR_DEFAULT_PARALLEL));
 	glyr_opt_useragent(&q,cfg_get_single_value_as_string_with_default(config,LOG_SUBCLASS,LOG_USERAGENT,GLYR_DEFAULT_USERAGENT));
-	glyr_opt_from(&q,cfg_get_single_value_as_string_with_default(config,LOG_SUBCLASS,LOG_FROM,NULL));
+	glyr_opt_from(&q,cfg_get_single_value_as_string_with_default(config,LOG_SUBCLASS,LOG_FROM,"all"));
 
 #ifdef GLYROS_DEBUG
 	g_print("fuzz: %d\n",(gint)q.fuzzyness);
