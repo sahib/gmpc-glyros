@@ -1,9 +1,15 @@
-<h1>GMPC-GLYROS</h1>
+h1. GMPC-GLYROS
 
-A plugin for the popular Gnome Music Player Client (gmpc), using the unknown and infamous libglyr library
-to fetch reliable all sort of metadata, including lyrics, cover, artist photo, album reviews, artist bio and similiar artists. 
-There is more to come, and libglyr even offers more options here.
+A plugin for the popular Gnome Music Player Client (gmpc), using the unknown and infamous _libglyr_ library
+to fetch reliable all sort of metadata, including lyrics, cover, artist photo, album reviews, artist bio and similar artists and songs. 
 
-Installation might, or might not work. The cmake system currently used is a little shaky, but a PKGBUILD for ArchLinux will be 
-provided in a few weeks, so you can make your own package out of it. This plugin succeeds actually other metadatfetchers,
-although libglyr is not yet ready for stable use. It might be in a few weeks though. Let's see!
+There is a "PKGBUILD":https://aur.archlinux.org/packages.php?ID=52085 for Archlinux available, user's of other distribution should build form Source:
+* "Install libglyr first":https://github.com/sahib/glyr/wiki/Compiling
+* Make sure you have the gmpc-headers installed.
+* @git clone https://github.com/sahib/gmpc-glyros@
+* @cd gmpc-glyros@
+* @cmake .@
+* @make@
+* @sudo make install@
+* Load up gmpc and make sure it's checked in the Preferences dialog.
+* Optionally disable other lyrics and cover providers there.
