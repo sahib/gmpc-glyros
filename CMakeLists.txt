@@ -7,9 +7,6 @@ SET( GMPC_GLYROS_VERSION_MAJOR "0")
 SET( GMPC_GLYROS_VERSION_MINOR "1")
 CONFIGURE_FILE("src/config.h.in" "src/config.h")
 
-# Default to /usr, use -DCMAKE_INSTALL_PREFIX="path" to change it
-SET(CMAKE_INSTALL_PREFIX "/usr")
-
 # Check deps 
 PKG_CHECK_MODULES(GMPCPKG gmpc REQUIRED)
 PKG_CHECK_MODULES(GLYRPKG libglyr REQUIRED)
